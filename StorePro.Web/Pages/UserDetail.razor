@@ -1,0 +1,146 @@
+@page "/usuarios/{Id:int}"
+@inject IUserService UserService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>@(_user?.FullName ?? "Usuario") | StorePro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <MudLink Href="/usuarios" Color="Color.Primary" Class="d-inline-flex align-center mb-2" Style="cursor:pointer;">
+            ← Volver a Usuarios
+        </MudLink>
+        <MudText Typo="Typo.h4" Class="page-title">Detalle del Usuario</MudText>
+    </div>
+    @if (_user is not null)
+    {
+        <div class="d-flex" style="gap:8px;">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Edit"
+                       OnClick="EditAsync" Class="text-none">Editar</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Delete"
+                       OnClick="DeleteAsync" Class="text-none">Eliminar</MudButton>
+        </div>
+    }
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_user is null)
+{
+    <div class="section-card pa-8 text-center">
+        <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" Class="mb-2" />
+        <MudText Typo="Typo.h6">Usuario no encontrado</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4 text-none"
+                   OnClick="@(() => Navigation.NavigateTo("/usuarios"))">Volver al listado</MudButton>
+    </div>
+}
+else
+{
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="4">
+            <div class="section-card pa-6 text-center">
+                <MudAvatar Size="Size.Large" Class="avatar-initials mx-auto mb-4" Style="width:96px;height:96px;font-size:2rem;">
+                    @Format.Initials(_user.FullName)
+                </MudAvatar>
+                <MudText Typo="Typo.h6" Style="font-weight:700;">@_user.FullName</MudText>
+                <MudText Typo="Typo.body2" Class="cell-muted mb-3">@_user.Email</MudText>
+                <div class="d-flex justify-center mb-3" style="gap:8px;">
+                    <span class="status-chip chip-purple">@UserRoles.ToSpanish(_user.Role)</span>
+                    <span class="status-chip @(_user.Status == UserStatuses.Active ? "chip-green" : "chip-red")">
+                        @UserStatuses.ToSpanish(_user.Status)
+                    </span>
+                </div>
+            </div>
+        </MudItem>
+        <MudItem xs="12" md="8">
+            <div class="section-card pa-6">
+                <MudText Typo="Typo.h6" Style="font-weight:700;" Class="mb-4">Información de la Cuenta</MudText>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6">
+                        <div class="stat-label">NOMBRE COMPLETO</div>
+                        <div class="cell-strong">@_user.FullName</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="stat-label">CORREO ELECTRÓNICO</div>
+                        <div class="cell-strong">@_user.Email</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="stat-label">ROL</div>
+                        <div class="cell-strong">@UserRoles.ToSpanish(_user.Role)</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="stat-label">ESTADO</div>
+                        <div class="cell-strong">@UserStatuses.ToSpanish(_user.Status)</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="stat-label">ÚLTIMA ACTIVIDAD</div>
+                        <div class="cell-strong">@Format.Relative(_user.LastActiveAt)</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="stat-label">FECHA DE REGISTRO</div>
+                        <div class="cell-strong">@Format.DateTimeFull(_user.CreatedAt)</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="stat-label">ID DE USUARIO</div>
+                        <div class="cell-strong">#@_user.Id</div>
+                    </MudItem>
+                </MudGrid>
+            </div>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private UserDetailDto? _user;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _user = await UserService.GetUserAsync(Id);
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            _user = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task EditAsync()
+    {
+        var parameters = new DialogParameters<UserEditDialog> { { x => x.Usuario, _user } };
+        var dialog = await DialogService.ShowAsync<UserEditDialog>("Editar Usuario",
+            parameters, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            _user = await UserService.GetUserAsync(Id);
+            Snackbar.Add("Usuario actualizado correctamente.", Severity.Success);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Eliminar usuario",
+            $"¿Está seguro de que desea eliminar a \"{_user!.FullName}\"? Esta acción no se puede deshacer.",
+            yesText: "Eliminar", noText: "Cancelar");
+
+        if (confirmed is null or false)
+            return;
+
+        await UserService.DeleteAsync(_user.Id);
+        Snackbar.Add("Usuario eliminado correctamente.", Severity.Success);
+        Navigation.NavigateTo("/usuarios");
+    }
+}

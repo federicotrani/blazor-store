@@ -1,0 +1,142 @@
+@page "/categorias"
+@inject ICategoryService CategoryService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Categorías | StorePro</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1 class="page-title">Categorías</h1>
+        <p class="page-subtitle">Organice los productos de su tienda en categorías.</p>
+    </div>
+    <div class="page-header-actions">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add"
+                   OnClick="@(() => OpenDialogAsync(null))" Class="text-none" Size="Size.Medium">
+            Agregar Categoría
+        </MudButton>
+    </div>
+</div>
+
+<div class="section-card">
+    <div class="table-scroll">
+        <table class="sp-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Productos</th>
+                    <th>Estado</th>
+                    <th>Fecha de creación</th>
+                    <th style="text-align:right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_loading)
+                {
+                    <tr>
+                        <td colspan="6"><MudProgressLinear Color="Color.Primary" Indeterminate="true" /></td>
+                    </tr>
+                }
+                else if (_categories.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="cell-muted" style="text-align:center;padding:32px;">
+                            No hay categorías registradas.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var c in _categories)
+                    {
+                        var categoria = c;
+                        <tr>
+                            <td class="cell-strong">@categoria.Name</td>
+                            <td class="cell-muted">@categoria.Description</td>
+                            <td>@Format.Number(categoria.ProductCount)</td>
+                            <td>
+                                <span class="status-chip @(categoria.IsActive ? "chip-green" : "chip-gray")">
+                                    @(categoria.IsActive ? "Activa" : "Inactiva")
+                                </span>
+                            </td>
+                            <td class="cell-muted">@Format.Date(categoria.CreatedAt)</td>
+                            <td style="text-align:right;white-space:nowrap;">
+                                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Color="Color.Primary"
+                                               Title="Editar" OnClick="@(() => OpenDialogAsync(categoria))" />
+                                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                               Title="Eliminar" OnClick="@(() => DeleteAsync(categoria))" />
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<CategoryDto> _categories = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _categories = await CategoryService.GetCategoriesAsync() ?? [];
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenDialogAsync(CategoryDto? categoria)
+    {
+        var esNueva = categoria is null;
+        var parameters = new DialogParameters<CategoryEditDialog> { { x => x.Categoria, categoria } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CategoryEditDialog>(
+            esNueva ? "Añadir Categoría" : "Editar Categoría", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add(esNueva ? "Categoría añadida correctamente." : "Categoría actualizada correctamente.",
+                Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(CategoryDto categoria)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Eliminar categoría",
+            $"¿Está seguro de que desea eliminar la categoría \"{categoria.Name}\"?",
+            yesText: "Eliminar", noText: "Cancelar");
+
+        if (confirmed is null or false)
+            return;
+
+        try
+        {
+            await CategoryService.DeleteAsync(categoria.Id);
+            Snackbar.Add("Categoría eliminada correctamente.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+}

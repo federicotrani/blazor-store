@@ -1,0 +1,137 @@
+@using System.ComponentModel.DataAnnotations
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(EsNuevo ? "Invitar Usuario" : "Editar Usuario")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_model" OnValidSubmit="SaveAsync" novalidate>
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="_model.FullName" Label="Nombre completo" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Class="mb-4" For="() => _model.FullName" Immediate="true" />
+            <MudTextField @bind-Value="_model.Email" Label="Correo electrónico" InputType="InputType.Email"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4"
+                          For="() => _model.Email" Immediate="true" />
+            <MudSelect @bind-Value="_model.Role" T="string" Label="Rol" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Class="mb-4" For="() => _model.Role">
+                @foreach (var r in UserRoles.All)
+                {
+                    <MudSelectItem Value="@r">@UserRoles.ToSpanish(r)</MudSelectItem>
+                }
+            </MudSelect>
+            @if (!EsNuevo)
+            {
+                <MudSelect @bind-Value="_model.Status" T="string" Label="Estado" Variant="Variant.Outlined"
+                           Margin="Margin.Dense" Class="mb-4" For="() => _model.Status">
+                    @foreach (var s in UserStatuses.All)
+                    {
+                        <MudSelectItem Value="@s">@UserStatuses.ToSpanish(s)</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            <MudTextField @bind-Value="_model.Password" Label="@(_esNuevo ? "Contraseña" : "Nueva contraseña (opcional)")"
+                          InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@(_showPassword ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                          OnAdornmentClick="@(() => _showPassword = !_showPassword)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4"
+                          For="() => _model.Password" />
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_errorMessage</MudAlert>
+            }
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="CancelAsync" Disabled="_saving">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Loading="_saving">
+            @(EsNuevo ? "Invitar" : "Guardar Cambios")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private IUserService UserService { get; set; } = default!;
+
+    [Parameter] public UserDetailDto? Usuario { get; set; }
+
+    private bool _esNuevo => Usuario is null;
+    private bool EsNuevo => _esNuevo;
+
+    private UserForm _model = new();
+    private string? _errorMessage;
+    private bool _showPassword;
+    private bool _saving;
+
+    private class UserForm
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [MaxLength(150, ErrorMessage = "Máximo 150 caracteres.")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El correo es obligatorio.")]
+        [EmailAddress(ErrorMessage = "Formato de correo inválido.")]
+        [MaxLength(200)]
+        public string Email { get; set; } = string.Empty;
+
+        [MinLength(6, ErrorMessage = "Mínimo 6 caracteres.")]
+        public string? Password { get; set; }
+
+        public string Role { get; set; } = UserRoles.Customer;
+        public string Status { get; set; } = UserStatuses.Active;
+    }
+
+    protected override void OnInitialized()
+    {
+        if (Usuario is not null)
+            _model = new UserForm
+            {
+                FullName = Usuario.FullName,
+                Email = Usuario.Email,
+                Role = Usuario.Role,
+                Status = Usuario.Status
+            };
+    }
+
+    private async Task SaveAsync()
+    {
+        _errorMessage = null;
+
+        if (EsNuevo && string.IsNullOrWhiteSpace(_model.Password))
+        {
+            _errorMessage = "La contraseña es obligatoria para nuevos usuarios.";
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (EsNuevo)
+            {
+                await UserService.CreateAsync(new CreateUserRequest(
+                    _model.FullName, _model.Email, _model.Password!, _model.Role, _model.Status));
+            }
+            else
+            {
+                await UserService.UpdateAsync(Usuario!.Id, new UpdateUserRequest(
+                    _model.FullName, _model.Email, _model.Role, _model.Status,
+                    string.IsNullOrWhiteSpace(_model.Password) ? null : _model.Password));
+            }
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch
+        {
+            _errorMessage = "Error inesperado al guardar el usuario.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void CancelAsync() => MudDialog.Cancel();
+}

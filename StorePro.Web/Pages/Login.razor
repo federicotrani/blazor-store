@@ -1,0 +1,194 @@
+@page "/login"
+@layout AuthLayout
+@inject AuthStateService AuthState
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="logo-icon">
+                <MudIcon Icon="@Icons.Material.Outlined.Storefront" Size="Size.Medium" />
+            </div>
+            <MudText Typo="Typo.h5" Style="font-weight:700;">StorePro</MudText>
+        </div>
+        <MudText Typo="Typo.body1" Class="login-subtitle">Autenticación de Management Suite</MudText>
+
+<MudTabs Elevation="0" Rounded="false" Borderless="true" ApplyEffectsToContainer="true"
+                 PanelClass="login-panel" @bind-ActivePanelIndex="_activeTab">
+            <MudTabPanel Text="INICIAR SESIÓN">
+                <EditForm Model="_loginModel" OnValidSubmit="DoLoginAsync" novalidate>
+                    <DataAnnotationsValidator />
+                    <div class="login-field-group">
+                        <MudTextField @bind-Value="_loginModel.Email" Label="Correo electrónico"
+                                      InputType="InputType.Email" Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Outlined.Email" IconSize="Size.Medium"
+                                      Variant="Variant.Outlined" Margin="Margin.Normal"
+                                      For="() => _loginModel.Email" Immediate="true" />
+                    </div>
+                    <div class="login-field-group">
+                        <MudTextField @bind-Value="_loginModel.Password" Label="Contraseña"
+                                      InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                      Adornment="Adornment.End" AdornmentIcon="@(_showPassword ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                                      OnAdornmentClick="@(() => _showPassword = !_showPassword)" IconSize="Size.Medium"
+                                      Variant="Variant.Outlined" Margin="Margin.Normal"
+                                      For="() => _loginModel.Password" />
+                    </div>
+                    <div class="d-flex justify-end login-forgot">
+                        <MudLink Href="javascript:void(0)" Color="Color.Primary" Class="forgot-link"
+                                 OnClick="@(() => Snackbar.Add("Contacte al administrador para restablecer su contraseña.", Severity.Info))">
+                            ¿Olvidó su contraseña?
+                        </MudLink>
+                    </div>
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true" Class="login-alert">@_errorMessage</MudAlert>
+                    }
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                               ButtonType="ButtonType.Submit" Loading="_busy" Class="text-none login-submit">
+                        Iniciar Sesión
+                    </MudButton>
+                </EditForm>
+                <MudText Typo="Typo.caption" Class="text-secondary login-hint">
+                    Usuario demo: <b>admin@storepro.dev</b> · Contraseña: <b>Admin123$</b>
+                </MudText>
+            </MudTabPanel>
+
+            <MudTabPanel Text="REGISTRARSE">
+                <EditForm Model="_registerModel" OnValidSubmit="DoRegisterAsync" novalidate>
+                    <DataAnnotationsValidator />
+                    <div class="login-field-group">
+                        <MudTextField @bind-Value="_registerModel.FullName" Label="Nombre completo"
+                                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Person"
+                                      IconSize="Size.Medium" Variant="Variant.Outlined" Margin="Margin.Normal"
+                                      For="() => _registerModel.FullName" Immediate="true" />
+                    </div>
+                    <div class="login-field-group">
+                        <MudTextField @bind-Value="_registerModel.Email" Label="Correo electrónico"
+                                      InputType="InputType.Email" Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Outlined.Email" IconSize="Size.Medium"
+                                      Variant="Variant.Outlined" Margin="Margin.Normal"
+                                      For="() => _registerModel.Email" Immediate="true" />
+                    </div>
+                    <div class="login-field-group">
+                        <MudTextField @bind-Value="_registerModel.Password" Label="Contraseña"
+                                      InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                      Adornment="Adornment.End" AdornmentIcon="@(_showPassword ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                                      OnAdornmentClick="@(() => _showPassword = !_showPassword)" IconSize="Size.Medium"
+                                      Variant="Variant.Outlined" Margin="Margin.Normal"
+                                      For="() => _registerModel.Password" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true" Class="login-alert">@_errorMessage</MudAlert>
+                    }
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                               ButtonType="ButtonType.Submit" Loading="_busy" Class="text-none login-submit">
+                        Crear Cuenta
+                    </MudButton>
+                </EditForm>
+                <MudText Typo="Typo.caption" Class="text-secondary login-hint">
+                    Las cuentas nuevas se registran con rol <b>Cliente</b>.
+                </MudText>
+            </MudTabPanel>
+        </MudTabs>
+
+        <div class="login-footer">Conexión segura establecida. V 2.4.1</div>
+    </div>
+</div>
+
+@code {
+    private int _activeTab;
+    private bool _showPassword;
+    private bool _busy;
+    private string? _errorMessage;
+
+    private readonly LoginModel _loginModel = new();
+    private readonly RegisterModel _registerModel = new();
+
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "El correo es obligatorio.")]
+        [EmailAddress(ErrorMessage = "Formato de correo inválido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La contraseña es obligatoria.")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private class RegisterModel
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [MaxLength(150, ErrorMessage = "Máximo 150 caracteres.")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El correo es obligatorio.")]
+        [EmailAddress(ErrorMessage = "Formato de correo inválido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La contraseña es obligatoria.")]
+        [MinLength(6, ErrorMessage = "Mínimo 6 caracteres.")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    protected override void OnInitialized()
+    {
+        if (AuthState.IsAuthenticated)
+            Navigation.NavigateTo("/", replace: true);
+    }
+
+    private async Task DoLoginAsync()
+    {
+        _busy = true;
+        _errorMessage = null;
+        try
+        {
+            var ok = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
+            if (ok)
+            {
+                Snackbar.Add("Bienvenido de nuevo.", Severity.Success);
+                Navigation.NavigateTo("/", replace: true);
+            }
+            else
+            {
+                _errorMessage = "Credenciales inválidas. Verifique su correo y contraseña.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "No se pudo conectar con el servidor. " + ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task DoRegisterAsync()
+    {
+        _busy = true;
+        _errorMessage = null;
+        try
+        {
+            var ok = await AuthService.RegisterAsync(_registerModel.FullName, _registerModel.Email, _registerModel.Password);
+            if (ok)
+            {
+                Snackbar.Add("Cuenta creada correctamente.", Severity.Success);
+                Navigation.NavigateTo("/", replace: true);
+            }
+            else
+            {
+                _errorMessage = "No se pudo completar el registro. Verifique los datos (el correo no debe estar registrado).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "No se pudo conectar con el servidor. " + ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

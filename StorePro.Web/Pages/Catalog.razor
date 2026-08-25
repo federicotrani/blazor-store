@@ -1,0 +1,95 @@
+@page "/catalogo"
+@inject IProductService ProductService
+@inject NavigationManager Navigation
+
+<PageTitle>Catálogo | StorePro</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1 class="page-title">Catálogo</h1>
+        <p class="page-subtitle">Explore los productos disponibles en la tienda.</p>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_products.Count == 0)
+{
+    <div class="section-card pa-8 text-center">
+        <MudText Typo="Typo.h6">No hay productos publicados todavía.</MudText>
+    </div>
+}
+else
+{
+    <div class="catalog-grid">
+        @foreach (var p in _products)
+        {
+            var producto = p;
+            <div class="catalog-card" @onclick="@(() => Navigation.NavigateTo($"/productos/{producto.Id}"))">
+                @if (!string.IsNullOrEmpty(producto.ImageUrl))
+                {
+                    <img src="@(ApiBaseUrl + producto.ImageUrl.TrimStart('/'))" class="catalog-img" alt="@producto.Name" />
+                }
+                else
+                {
+                    <div class="catalog-img">
+                        <MudIcon Icon="@Icons.Material.Outlined.Image" Size="Size.Large" />
+                    </div>
+                }
+                <div class="pa-4">
+                    <div class="d-flex justify-space-between align-center mb-1">
+                        <span class="status-chip chip-purple">@producto.CategoryName</span>
+                        @((MarkupString)StatusChip(producto.Status))
+                    </div>
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:600;">@producto.Name</MudText>
+                    <MudText Typo="Typo.body2" Class="cell-muted mb-2" Style="min-height:40px;">
+                        @(producto.Description?.Length > 70 ? producto.Description[..70] + "…" : producto.Description)
+                    </MudText>
+                    <div class="d-flex justify-space-between align-center">
+                        <MudText Typo="Typo.h6" Style="color:var(--sp-primary);font-weight:700;">
+                            @Format.Money(producto.Price)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Class="cell-muted">
+                            @(producto.Stock > 0 ? $"{Format.Number(producto.Stock)} en stock" : "Sin stock")
+                        </MudText>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
+
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? string.Empty;
+
+    private IReadOnlyList<ProductDto> _products = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await ProductService.GetProductsAsync(status: ProductStatuses.Active, page: 1, pageSize: 24);
+            _products = result?.Items ?? [];
+        }
+        catch (ApiException)
+        {
+            // El catálogo requiere sesión; el layout gestiona la redirección
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string StatusChip(string status) => status switch
+    {
+        ProductStatuses.Active => $"<span class='status-chip chip-green'>Disponible</span>",
+        ProductStatuses.OutOfStock => $"<span class='status-chip chip-red'>Agotado</span>",
+        _ => $"<span class='status-chip chip-gray'>{ProductStatuses.ToSpanish(status)}</span>"
+    };
+}

@@ -1,0 +1,60 @@
+@page "/soporte"
+
+<PageTitle>Soporte | StorePro</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1 class="page-title">Soporte</h1>
+        <p class="page-subtitle">¿Necesita ayuda? Estamos aquí para asistirle.</p>
+    </div>
+</div>
+
+<MudGrid Spacing="4">
+    <MudItem xs="12" md="6">
+        <div class="section-card pa-6">
+            <div class="stat-icon mb-3" style="background:var(--sp-primary-light);color:var(--sp-primary);">
+                <MudIcon Icon="@Icons.Material.Outlined.Email" />
+            </div>
+            <MudText Typo="Typo.h6" Style="font-weight:700;">Correo de Soporte</MudText>
+            <MudText Typo="Typo.body2" Class="cell-muted mb-2">
+                Escríbanos a <b>soporte@storepro.dev</b> y responderemos en menos de 24 horas.
+            </MudText>
+        </div>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <div class="section-card pa-6">
+            <div class="stat-icon mb-3" style="background:var(--sp-green-bg);color:var(--sp-green-text);">
+                <MudIcon Icon="@Icons.Material.Outlined.Phone" />
+            </div>
+            <MudText Typo="Typo.h6" Style="font-weight:700;">Teléfono de Atención</MudText>
+            <MudText Typo="Typo.body2" Class="cell-muted mb-2">
+                Llámenos al <b>+34 900 123 456</b>, de lunes a viernes de 9:00 a 18:00.
+            </MudText>
+        </div>
+    </MudItem>
+    <MudItem xs="12">
+        <div class="section-card pa-6">
+            <MudText Typo="Typo.h6" Style="font-weight:700;" Class="mb-2">Preguntas Frecuentes</MudText>
+            <MudExpansionPanels Elevation="0" Class="section-card">
+                <MudExpansionPanel Text="¿Cómo restablezco mi contraseña?">
+                    <MudText Typo="Typo.body2" Class="cell-muted">
+                        Contacte a un administrador desde la pantalla de inicio de sesión con la opción
+                        "¿Olvidó su contraseña?".
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="¿Cómo añado un nuevo producto?">
+                    <MudText Typo="Typo.body2" Class="cell-muted">
+                        Vaya a la sección Productos y pulse el botón "Añadir Producto". Complete el formulario,
+                        suba una imagen y guarde los cambios.
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="¿Qué roles de usuario existen?">
+                    <MudText Typo="Typo.body2" Class="cell-muted">
+                        Administrador (acceso total), Gestor (gestión de productos y categorías) y
+                        Cliente (acceso de solo lectura).
+                    </MudText>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </div>
+    </MudItem>
+</MudGrid>

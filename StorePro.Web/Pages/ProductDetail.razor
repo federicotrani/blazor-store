@@ -1,0 +1,162 @@
+@page "/productos/{Id:int}"
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>@(_product?.Name ?? "Producto") | StorePro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <MudLink Href="/productos" Color="Color.Primary" Class="d-inline-flex align-center mb-2" Style="cursor:pointer;">
+            ← Volver a Productos
+        </MudLink>
+        <MudText Typo="Typo.h4" Class="page-title">Detalle del Producto</MudText>
+    </div>
+    @if (_product is not null)
+    {
+        <div class="d-flex" style="gap:8px;">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Edit"
+                       OnClick="EditAsync" Class="text-none">Editar</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Delete"
+                       OnClick="DeleteAsync" Class="text-none">Eliminar</MudButton>
+        </div>
+    }
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_product is null)
+{
+    <div class="section-card pa-8 text-center">
+        <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" Class="mb-2" />
+        <MudText Typo="Typo.h6">Producto no encontrado</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4 text-none"
+                   OnClick="@(() => Navigation.NavigateTo("/productos"))">Volver al listado</MudButton>
+    </div>
+}
+else
+{
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="5">
+            <div class="section-card pa-4">
+                @if (!string.IsNullOrEmpty(_product.ImageUrl))
+                {
+                    <img src="@(ApiBaseUrl + _product.ImageUrl.TrimStart('/'))" alt="@_product.Name"
+                         style="width:100%;border-radius:12px;max-height:360px;object-fit:cover;" />
+                }
+                else
+                {
+                    <div class="product-thumb-placeholder" style="width:100%;height:320px;">
+                        <MudIcon Icon="@Icons.Material.Outlined.Image" Size="Size.Large" />
+                    </div>
+                }
+            </div>
+        </MudItem>
+        <MudItem xs="12" md="7">
+            <div class="section-card pa-6">
+                <div class="d-flex justify-space-between align-start flex-wrap" style="gap:12px;">
+                    <MudText Typo="Typo.h5" Style="font-weight:700;">@_product.Name</MudText>
+                    @((MarkupString)StatusChip(_product.Status))
+                </div>
+                <MudText Typo="Typo.h4" Style="color:var(--sp-primary);font-weight:700;" Class="my-3">
+                    @Format.Money(_product.Price)
+                </MudText>
+                <MudText Typo="Typo.body1" Class="cell-muted mb-4">
+                    @(_product.Description ?? "Sin descripción disponible.")
+                </MudText>
+
+                <MudDivider Class="mb-4" />
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="6" sm="4">
+                        <div class="stat-label">CATEGORÍA</div>
+                        <div class="cell-strong">@_product.CategoryName</div>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <div class="stat-label">STOCK DISPONIBLE</div>
+                        <div class="cell-strong">@Format.Number(_product.Stock) unidades</div>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <div class="stat-label">FECHA DE CREACIÓN</div>
+                        <div class="cell-strong">@Format.Date(_product.CreatedAt)</div>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <div class="stat-label">ID DE PRODUCTO</div>
+                        <div class="cell-strong">#@_product.Id</div>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <div class="stat-label">VALOR DEL INVENTARIO</div>
+                        <div class="cell-strong">@Format.Money(_product.Price * _product.Stock)</div>
+                    </MudItem>
+                </MudGrid>
+            </div>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
+
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? string.Empty;
+
+    private ProductDto? _product;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _product = await ProductService.GetProductAsync(Id);
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            _product = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task EditAsync()
+    {
+        var parameters = new DialogParameters<ProductEditDialog> { { x => x.Producto, _product } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ProductEditDialog>("Editar Producto", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is ProductDto updated)
+        {
+            _product = updated;
+            Snackbar.Add("Producto actualizado correctamente.", Severity.Success);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Eliminar producto",
+            $"¿Está seguro de que desea eliminar \"{_product!.Name}\"? Esta acción no se puede deshacer.",
+            yesText: "Eliminar", noText: "Cancelar");
+
+        if (confirmed is null or false)
+            return;
+
+        await ProductService.DeleteAsync(_product.Id);
+        Snackbar.Add("Producto eliminado correctamente.", Severity.Success);
+        Navigation.NavigateTo("/productos");
+    }
+
+    private static string StatusChip(string status) => status switch
+    {
+        ProductStatuses.Active => $"<span class='status-chip chip-green'>{ProductStatuses.ToSpanish(status)}</span>",
+        ProductStatuses.OutOfStock => $"<span class='status-chip chip-red'>{ProductStatuses.ToSpanish(status)}</span>",
+        _ => $"<span class='status-chip chip-gray'>{ProductStatuses.ToSpanish(status)}</span>"
+    };
+}

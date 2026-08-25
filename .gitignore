@@ -1,0 +1,63 @@
+## .NET / Visual Studio
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+*.userprefs
+
+## Carpetas de compilación
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Ll]ogs/
+[Oo]bj/
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+## Migraciones de Entity Framework (se mantienen los archivos .cs, se ignoran artefactos)
+*.mdf
+*.ldf
+
+## Archivos subidos por la aplicación
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
+
+## Logs y temporales
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Configuración local y secretos
+appsettings.Local.json
+appsettings.*.Local.json
+*.pfx
+*.p12
+*.key
+
+## Entornos de IDE
+.idea/
+.vscode/
+*.code-workspace
+
+## Resultados de pruebas / cobertura
+TestResults/
+coverage*.xml
+*.coverage
+*.coveragexml

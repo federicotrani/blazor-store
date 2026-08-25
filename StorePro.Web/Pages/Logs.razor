@@ -1,0 +1,54 @@
+@page "/registros"
+
+<PageTitle>Registros del Sistema | StorePro</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1 class="page-title">Registros del Sistema</h1>
+        <p class="page-subtitle">Eventos recientes de la plataforma, servicios y pasarela de la API.</p>
+    </div>
+</div>
+
+<div class="section-card">
+    <div class="table-scroll">
+        <table class="sp-table">
+            <thead>
+                <tr>
+                    <th>Severidad</th>
+                    <th>Evento</th>
+                    <th>Origen</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in _logs)
+                {
+                    <tr>
+                        <td>
+                            <span class="status-chip @log.ChipClass">@log.Severity</span>
+                        </td>
+                        <td class="cell-strong">@log.Message</td>
+                        <td class="cell-muted">@log.Source</td>
+                        <td class="cell-muted">@log.Timestamp</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private sealed record LogEntry(string Severity, string ChipClass, string Message, string Source, string Timestamp);
+
+    private static readonly LogEntry[] _logs =
+    [
+        new("INFO", "chip-green", "Sincronización de catálogo de productos completada", "SYSTEM_JOB", "25/08/2026 09:12"),
+        new("INFO", "chip-green", "Copia de seguridad de la base de datos finalizada (2.4 GB)", "SYSTEM_JOB", "25/08/2026 08:45"),
+        new("INFO", "chip-purple", "Nuevo registro de usuario: admin@storepro.local", "AUTH_SVC", "25/08/2026 08:59"),
+        new("WARN", "chip-gray", "Categoría 'Electrónica' actualizada", "USER_REQ", "25/08/2026 08:15"),
+        new("WARN", "chip-gray", "Stock bajo detectado en 42 productos", "INVENTORY_SVC", "25/08/2026 07:30"),
+        new("ERROR", "chip-red", "Límite de tasa de la API excedido en el endpoint /v1/products", "GATEWAY_ERR", "25/08/2026 06:02"),
+        new("ERROR", "chip-red", "Intento de inicio de sesión fallido (5 intentos) para user@example.com", "AUTH_SVC", "24/08/2026 22:41"),
+        new("INFO", "chip-green", "Actualización de la plataforma aplicada (v2.4.1)", "SYSTEM_JOB", "24/08/2026 21:00")
+    ];
+}

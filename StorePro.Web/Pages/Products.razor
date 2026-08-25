@@ -1,0 +1,265 @@
+@page "/productos"
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Productos | StorePro</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1 class="page-title">Productos</h1>
+        <p class="page-subtitle">Gestione el inventario, los precios y los detalles del catálogo de su tienda.</p>
+    </div>
+    <div class="page-header-actions">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add"
+                   OnClick="@(() => OpenDialogAsync(null))" Class="text-none" Size="Size.Medium">
+            Agregar Producto
+        </MudButton>
+    </div>
+</div>
+
+<MudGrid Spacing="4" Class="mb-6">
+    <MudItem xs="12" md="3">
+        <div class="stat-card">
+            <div class="stat-label">PRODUCTOS TOTALES</div>
+            <div class="d-flex align-end gap-2">
+                <div class="stat-value stat-value-primary">@Format.Number(_stats?.TotalProducts ?? 0)</div>
+                <span class="stat-trend-up" style="font-size:13px;">↑12%</span>
+            </div>
+        </div>
+    </MudItem>
+    <MudItem xs="12" md="3">
+        <div class="stat-card">
+            <div class="stat-label">STOCK BAJO</div>
+            <div class="d-flex align-end gap-2">
+                <div class="stat-value stat-value-danger">@Format.Number(_stats?.LowStockCount ?? 0)</div>
+                <span style="color:var(--sp-red-text);font-size:13px;font-weight:600;">⚠ Alerta</span>
+            </div>
+        </div>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <div class="stat-card">
+            <div class="stat-label mb-2">FILTRO RÁPIDO</div>
+            <div class="d-flex align-center flex-wrap" style="gap:12px;">
+                <MudSelect T="int?" Value="_filterCategory" ValueChanged="@(async (int? v) => { _filterCategory = v; await OnFilterChangedAsync(); })"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Style="max-width:220px;" Label="Todas las Categorías" Clearable="true">
+                    @foreach (var c in _categories)
+                    {
+                        <MudSelectItem Value="@((int?)c.Id)">@c.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="string" Value="_filterStatus" ValueChanged="@(async (string? s) => { _filterStatus = s; await OnFilterChangedAsync(); })"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Style="max-width:180px;" Label="Estado: Todos" Clearable="true">
+                    @foreach (var s in ProductStatuses.All)
+                    {
+                        <MudSelectItem Value="@s">@ProductStatuses.ToSpanish(s)</MudSelectItem>
+                    }
+                </MudSelect>
+                <div class="filter-chip">Filtros Activos: @ActiveFilterCount</div>
+            </div>
+        </div>
+    </MudItem>
+</MudGrid>
+
+<div class="section-card">
+    <div class="table-scroll">
+        <table class="sp-table">
+            <thead>
+                <tr>
+                    <th>Imagen</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Estado</th>
+                    <th style="text-align:right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_loading)
+                {
+                    <tr>
+                        <td colspan="6">
+                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                        </td>
+                    </tr>
+                }
+                else if (_products.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="cell-muted" style="text-align:center;padding:32px;">
+                            No se encontraron productos.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var p in _products)
+                    {
+                        var producto = p;
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(producto.ImageUrl))
+                                {
+                                    <img src="@(ApiBaseUrl + producto.ImageUrl.TrimStart('/'))" class="product-thumb"
+                                         alt="@producto.Name" />
+                                }
+                                else
+                                {
+                                    <div class="product-thumb-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Image" Size="Size.Small" />
+                                    </div>
+                                }
+                            </td>
+                            <td class="cell-strong">@producto.Name</td>
+                            <td class="cell-muted">@producto.CategoryName</td>
+                            <td>@Format.Money(producto.Price)</td>
+                            <td>@StatusChip(producto.Status)</td>
+                            <td style="text-align:right;white-space:nowrap;">
+                                <MudIconButton Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small"
+                                               Color="Color.Default" Title="Ver detalle"
+                                               OnClick="@(() => Navigation.NavigateTo($"/productos/{producto.Id}"))" />
+                                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Color="Color.Primary"
+                                               Title="Editar" OnClick="@(() => OpenDialogAsync(producto))" />
+                                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                               Title="Eliminar" OnClick="@(() => DeleteAsync(producto))" />
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="d-flex justify-space-between align-center pa-4 flex-wrap" style="gap:12px;">
+        <MudText Typo="Typo.body2" Class="cell-muted">
+            Mostrando @RangeFrom–@RangeTo de @Format.Number(_total)
+        </MudText>
+        <MudPagination Count="@Math.Max(1, _totalPages)" SelectedIndex="_page" SelectedIndexChanged="OnPageChangedAsync"
+                       Color="Color.Primary" ShowFirstButton="false" ShowLastButton="false" MiddleCount="3" />
+    </div>
+</div>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
+
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? string.Empty;
+
+    private IReadOnlyList<ProductDto> _products = [];
+    private IReadOnlyList<CategoryDto> _categories = [];
+    private ProductStatsDto? _stats;
+    private bool _loading = true;
+
+    private int? _filterCategory;
+    private string? _filterStatus;
+    private int _page = 0; // índice basado en 0
+    private int _total;
+    private int _totalPages;
+    private const int PageSize = 8;
+
+    private int ActiveFilterCount => (_filterCategory.HasValue ? 1 : 0) + (string.IsNullOrWhiteSpace(_filterStatus) ? 0 : 1);
+
+    private int RangeFrom => _total == 0 ? 0 : _page * PageSize + 1;
+    private int RangeTo => Math.Min((_page + 1) * PageSize, _total);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryService.GetCategoriesAsync() ?? [];
+        await LoadStatsAsync();
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadStatsAsync()
+    {
+        try
+        {
+            _stats = await ProductService.GetStatsAsync();
+        }
+        catch (ApiException)
+        {
+            // Sin permisos: se ignoran las estadísticas
+        }
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        _loading = true;
+        try
+        {
+            var result = await ProductService.GetProductsAsync(
+                categoryId: _filterCategory, status: _filterStatus, page: _page + 1, pageSize: PageSize);
+            _products = result?.Items ?? [];
+            _total = result?.TotalCount ?? 0;
+            _totalPages = result?.TotalPages ?? 1;
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnFilterChangedAsync()
+    {
+        _page = 0;
+        await LoadProductsAsync();
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _page = Math.Max(0, page);
+        await LoadProductsAsync();
+    }
+
+    private async Task OpenDialogAsync(ProductDto? producto)
+    {
+        var parameters = new DialogParameters<ProductEditDialog> { { x => x.Producto, producto } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ProductEditDialog>(
+            producto is null ? "Añadir Producto" : "Editar Producto", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add(producto is null ? "Producto añadido correctamente." : "Producto actualizado correctamente.",
+                Severity.Success);
+            await LoadProductsAsync();
+            await LoadStatsAsync();
+        }
+    }
+
+    private async Task DeleteAsync(ProductDto producto)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Eliminar producto",
+            $"¿Está seguro de que desea eliminar el producto \"{producto.Name}\"? Esta acción no se puede deshacer.",
+            yesText: "Eliminar", noText: "Cancelar");
+
+        if (confirmed is null or false)
+            return;
+
+        try
+        {
+            await ProductService.DeleteAsync(producto.Id);
+            Snackbar.Add("Producto eliminado correctamente.", Severity.Success);
+            await LoadProductsAsync();
+            await LoadStatsAsync();
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private static MarkupString StatusChip(string status) => status switch
+    {
+        ProductStatuses.Active => (MarkupString)$"<span class='status-chip chip-green'>{ProductStatuses.ToSpanish(status)}</span>",
+        ProductStatuses.OutOfStock => (MarkupString)$"<span class='status-chip chip-red'>{ProductStatuses.ToSpanish(status)}</span>",
+        _ => (MarkupString)$"<span class='status-chip chip-gray'>{ProductStatuses.ToSpanish(status)}</span>"
+    };
+}

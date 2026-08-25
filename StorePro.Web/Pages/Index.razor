@@ -1,0 +1,150 @@
+@page "/"
+@inject IDashboardService DashboardService
+@inject AuthStateService AuthState
+
+<PageTitle>Panel de Control | StorePro</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1 class="page-title">Resumen del Panel</h1>
+        <p class="page-subtitle">Métricas del sistema y actividad reciente de la plataforma.</p>
+    </div>
+</div>
+
+@if (_stats is null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudGrid Spacing="4" Class="mb-6">
+        <MudItem xs="12" md="4">
+            <div class="stat-card">
+                <div class="d-flex justify-space-between align-start">
+                    <div>
+                        <div class="stat-label">PRODUCTOS TOTALES</div>
+                        <div class="stat-value">@_stats.TotalProducts.ToString("N0")</div>
+                    </div>
+                    <div class="stat-icon" style="background:var(--sp-primary-light);color:var(--sp-primary);">
+                        <MudIcon Icon="@Icons.Material.Outlined.Inventory2" />
+                    </div>
+                </div>
+                <div class="stat-footer">
+                    <span class="stat-trend-up">↗ +12%</span> vs el mes pasado
+                </div>
+            </div>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <div class="stat-card">
+                <div class="d-flex justify-space-between align-start">
+                    <div>
+                        <div class="stat-label">CATEGORÍAS ACTIVAS</div>
+                        <div class="stat-value">@_stats.TotalCategories</div>
+                    </div>
+                    <div class="stat-icon" style="background:var(--sp-green-bg);color:var(--sp-green-text);">
+                        <MudIcon Icon="@Icons.Material.Outlined.Category" />
+                    </div>
+                </div>
+                <div class="stat-footer">Estable en todas las regiones</div>
+            </div>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <div class="stat-card">
+                <div class="d-flex justify-space-between align-start">
+                    <div>
+                        <div class="stat-label">USUARIOS REGISTRADOS</div>
+                        <div class="stat-value">@_stats.TotalUsers.ToString("N0")</div>
+                    </div>
+                    <div class="stat-icon" style="background:var(--sp-pink-bg);color:var(--sp-pink);">
+                        <MudIcon Icon="@Icons.Material.Outlined.People" />
+                    </div>
+                </div>
+                <div class="stat-footer">
+                    <span class="stat-trend-up">↗ +5.2%</span> registros nuevos esta semana
+                </div>
+            </div>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="4">
+        <MudItem xs="12" lg="8">
+            <div class="section-card pa-5">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <MudText Typo="Typo.h5" Class="section-card-title">Resumen de Actividad</MudText>
+                    <MudToggleGroup T="string" @bind-SelectedValue="_period" Dense="true" Color="Color.Primary">
+                        <MudToggleItem Value="@("semanal")" Text="Semanal" />
+                        <MudToggleItem Value="@("mensual")" Text="Mensual" />
+                    </MudToggleGroup>
+                </div>
+                <div class="chart-wrap">
+                    <div class="chart-yaxis">
+                        <span>1000</span><span>750</span><span>500</span><span>250</span><span>0</span>
+                    </div>
+                    <div class="chart-bars">
+                        @foreach (var point in CurrentActivity)
+                        {
+                            var isMax = point.Value == MaxActivity && MaxActivity > 0;
+                            <div class="chart-bar-col">
+                                <div class="chart-bar @(isMax ? "chart-bar-active" : "")"
+                                     style="height:@(HeightPercent(point.Value))%;"></div>
+                                <div class="chart-bar-label @(isMax ? "chart-bar-label-active" : "")">@point.Label</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </MudItem>
+        <MudItem xs="12" lg="4">
+            <div class="section-card pa-5">
+                <MudText Typo="Typo.h5" Class="section-card-title mb-2">Registros del Sistema</MudText>
+                @foreach (var log in _systemLogs)
+                {
+                    <div class="log-entry">
+                        <div class="log-dot @log.CssClass"></div>
+                        <div>
+                            <div class="log-title">@log.Title</div>
+                            <div class="log-meta">@log.Meta</div>
+                        </div>
+                    </div>
+                }
+                <div class="d-flex justify-center pt-3">
+                    <MudLink Href="/registros" Color="Color.Primary" Class="font-weight-medium">Ver Todos los Registros</MudLink>
+                </div>
+            </div>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private DashboardStatsDto? _stats;
+    private string _period = "semanal";
+
+    private static readonly (string Title, string Meta, string CssClass)[] _systemLogs =
+    [
+        ("Sincronización de catálogo de productos completada", "hace 2 min · SYSTEM_JOB", "log-dot-green"),
+        ("Nuevo registro de usuario: admin@storepro.local", "hace 15 min · AUTH_SVC", "log-dot-pink"),
+        ("Categoría 'Electrónica' actualizada.", "hace 1 hora · USER_REQ", "log-dot-gray"),
+        ("Límite de tasa de la API excedido en el endpoint /v1/products", "hace 3 horas · GATEWAY_ERR", "log-dot-red")
+    ];
+
+    private IReadOnlyList<ActivityPointDto> CurrentActivity =>
+        _stats?.WeeklyActivity ?? [];
+
+    private int MaxActivity =>
+        CurrentActivity.Count == 0 ? 0 : CurrentActivity.Max(p => p.Value);
+
+    private int HeightPercent(int value) =>
+        MaxActivity == 0 ? 0 : (int)Math.Round(value * 100.0 / MaxActivity);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _stats = await DashboardService.GetStatsAsync();
+        }
+        catch (ApiException ex) when (ex.StatusCode == 401)
+        {
+            // El layout redirige a login si no hay sesión
+        }
+    }
+}

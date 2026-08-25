@@ -1,0 +1,710 @@
+:root {
+    --sp-primary: #5b4fe9;
+    --sp-primary-light: #eef0fd;
+    --sp-bg: #f8f9fc;
+    --sp-text: #0f172a;
+    --sp-text-secondary: #64748b;
+    --sp-border: #e2e8f0;
+    --sp-green-bg: #dcfce7;
+    --sp-green-text: #16a34a;
+    --sp-red-bg: #fee2e2;
+    --sp-red-text: #dc2626;
+    --sp-gray-bg: #f1f5f9;
+    --sp-gray-text: #64748b;
+    --sp-pink: #ec4899;
+    --sp-pink-bg: #fce7f3;
+}
+
+html, body {
+    font-family: Roboto, Helvetica, Arial, sans-serif;
+    background: var(--sp-bg);
+    color: var(--sp-text);
+}
+
+/* ---------- Barra superior ---------- */
+.topbar {
+    border-bottom: 1px solid var(--sp-border);
+    min-height: 64px;
+    z-index: 20;
+}
+
+.topbar .mud-toolbar {
+    min-height: 64px !important;
+}
+
+/* El MudAppBar en MudBlazor 9 es fijo por defecto: empujamos el contenido */
+.main-content {
+    background: var(--sp-bg);
+    min-height: calc(100vh - 64px);
+    padding-top: 64px !important;
+}
+
+.brand-title {
+    color: var(--sp-primary) !important;
+    font-weight: 700 !important;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sp-green-bg);
+    color: var(--sp-green-text);
+    border-radius: 999px;
+    padding: 6px 14px;
+    margin-right: 12px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--sp-green-text);
+}
+
+.notif-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--sp-red-text);
+}
+
+/* ---------- Barra lateral ---------- */
+.sidebar {
+    border-right: 1px solid var(--sp-border);
+}
+
+.sidebar-header {
+    padding: 24px 20px 16px;
+}
+
+.logo-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--sp-primary-light);
+    color: var(--sp-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.logo-title {
+    color: var(--sp-primary) !important;
+    font-weight: 700 !important;
+    line-height: 1.1;
+}
+
+.logo-subtitle {
+    color: var(--sp-text-secondary) !important;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 16px;
+    gap: 4px;
+    flex: 1;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: var(--sp-text-secondary);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: background .15s ease, color .15s ease;
+}
+
+    .nav-item:hover {
+        background: var(--sp-primary-light);
+        color: var(--sp-primary);
+    }
+
+    .nav-item .nav-icon {
+        color: inherit;
+    }
+
+.nav-item-active {
+    background: var(--sp-primary-light);
+    color: var(--sp-primary);
+    border-left-color: var(--sp-primary);
+}
+
+.sidebar-bottom {
+    padding: 16px;
+    border-top: 1px solid var(--sp-border);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: auto;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.logout-btn {
+    margin-top: 12px;
+    text-transform: none;
+    border-radius: 8px;
+    border-color: var(--sp-border);
+    color: var(--sp-text-secondary);
+}
+
+
+
+/* ---------- Pantalla de carga de autenticación ---------- */
+.auth-loading {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- Encabezados de página ---------- */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 28px 0;
+    padding: 0 0 20px 0;
+    border-bottom: 1px solid var(--sp-border);
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.page-header-text {
+    flex: 1 1 300px;
+    min-width: 0;
+}
+
+.page-header-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.page-title {
+    font-weight: 700 !important;
+    font-size: 2.1rem !important;
+    line-height: 1.2 !important;
+    color: var(--sp-text) !important;
+    letter-spacing: -0.02em !important;
+    margin: 0 0 6px 0 !important;
+    font-family: Roboto, Helvetica, Arial, sans-serif !important;
+    display: block !important;
+    visibility: visible !important;
+}
+
+.page-subtitle {
+    color: var(--sp-text-secondary) !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+    font-family: Roboto, Helvetica, Arial, sans-serif !important;
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* ---------- Tarjetas de estadísticas ---------- */
+.stat-card {
+    border: 1px solid var(--sp-border);
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.stat-label {
+    font-size: 12px;
+    letter-spacing: .08em;
+    color: var(--sp-text-secondary);
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--sp-text);
+}
+
+.stat-value-primary {
+    color: var(--sp-primary);
+}
+
+.stat-value-danger {
+    color: var(--sp-red-text);
+}
+
+.stat-footer {
+    font-size: 13px;
+    color: var(--sp-text-secondary);
+}
+
+.stat-trend-up {
+    color: var(--sp-green-text);
+    font-weight: 600;
+}
+
+.stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- Tablas ---------- */
+.sp-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .sp-table th {
+        text-align: left;
+        font-size: 12px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--sp-text-secondary);
+        font-weight: 600;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--sp-border);
+        white-space: nowrap;
+    }
+
+    .sp-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--sp-border);
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .sp-table tbody tr:hover {
+        background: #fafbff;
+    }
+
+.cell-strong {
+    font-weight: 600;
+    color: var(--sp-text);
+}
+
+.cell-muted {
+    color: var(--sp-text-secondary);
+}
+
+/* ---------- Chips de estado ---------- */
+.status-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.chip-green {
+    background: var(--sp-green-bg);
+    color: var(--sp-green-text);
+}
+
+.chip-gray {
+    background: var(--sp-gray-bg);
+    color: var(--sp-gray-text);
+}
+
+.chip-red {
+    background: var(--sp-red-bg);
+    color: var(--sp-red-text);
+}
+
+.chip-purple {
+    background: var(--sp-primary-light);
+    color: var(--sp-primary);
+}
+
+.chip-pink {
+    background: var(--sp-pink-bg);
+    color: var(--sp-pink);
+}
+
+/* ---------- Miniaturas de producto ---------- */
+.product-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--sp-gray-bg);
+}
+
+.product-thumb-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: var(--sp-gray-bg);
+    color: var(--sp-gray-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- Gráfico del panel ---------- */
+.chart-wrap {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.chart-yaxis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--sp-text-secondary);
+    padding-bottom: 26px;
+}
+
+.chart-bars {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    height: 260px;
+    border-bottom: 1px solid var(--sp-border);
+    padding-bottom: 0;
+}
+
+.chart-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.chart-bar {
+    width: 100%;
+    max-width: 72px;
+    background: var(--sp-primary-light);
+    border-radius: 6px 6px 0 0;
+    transition: height .4s ease;
+}
+
+.chart-bar-active {
+    background: var(--sp-primary);
+}
+
+.chart-bar-label {
+    font-size: 13px;
+    color: var(--sp-text-secondary);
+    padding-top: 8px;
+}
+
+.chart-bar-label-active {
+    color: var(--sp-primary);
+    font-weight: 600;
+}
+
+/* ---------- Registro del sistema (panel) ---------- */
+.log-entry {
+    display: flex;
+    gap: 12px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--sp-border);
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
+.log-dot-green { background: #22c55e; }
+.log-dot-pink { background: var(--sp-pink); }
+.log-dot-gray { background: #94a3b8; }
+.log-dot-red { background: var(--sp-red-text); }
+
+.log-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--sp-text);
+}
+
+.log-meta {
+    font-size: 13px;
+    color: var(--sp-text-secondary);
+}
+
+/* ---------- Inicio de sesión ---------- */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sp-bg);
+    background-image: radial-gradient(circle, #d8dfeb 1px, transparent 1px);
+    background-size: 24px 24px;
+    padding: 16px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border: 1px solid var(--sp-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, .06);
+    overflow: hidden;
+}
+
+.login-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 32px 24px 4px;
+}
+
+.login-subtitle {
+    text-align: center;
+    color: var(--sp-text-secondary);
+    padding: 0 24px 28px;
+}
+
+.login-panel {
+    padding: 8px 40px 32px !important;
+}
+
+@media (max-width: 480px) {
+    .login-panel {
+        padding: 8px 24px 28px !important;
+    }
+}
+
+.login-field-group {
+    margin-bottom: 22px;
+}
+
+.login-field-group .mud-input-control {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.login-forgot {
+    margin: -6px 0 24px 0;
+    justify-content: flex-end;
+}
+
+.login-forgot .forgot-link {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.login-alert {
+    margin-bottom: 18px !important;
+}
+
+.login-submit {
+    margin-top: 6px;
+}
+
+.login-hint {
+    margin-top: 22px;
+    display: block;
+    text-align: center;
+    color: var(--sp-text-secondary) !important;
+}
+
+.login-footer {
+    text-align: center;
+    font-size: 13px;
+    color: var(--sp-text-secondary);
+    background: var(--sp-gray-bg);
+    padding: 16px;
+    letter-spacing: .04em;
+    margin-top: 8px;
+}
+
+/* ---------- Catálogo ---------- */
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.catalog-card {
+    border: 1px solid var(--sp-border);
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+    transition: box-shadow .15s ease, transform .15s ease;
+    cursor: pointer;
+}
+
+    .catalog-card:hover {
+        box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+        transform: translateY(-2px);
+    }
+
+.catalog-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    background: var(--sp-gray-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sp-gray-text);
+}
+
+/* ---------- Varios ---------- */
+.gap-2 { gap: 8px; }
+
+.table-scroll { overflow-x: auto; }
+
+/* ---------- Subida de imagen en diálogos ---------- */
+.sp-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--sp-primary);
+    font-weight: 500;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px dashed var(--sp-primary);
+    background: var(--sp-primary-light);
+}
+
+.sp-hidden-input {
+    display: none;
+}
+
+.product-dialog-image {
+    width: 110px;
+    height: 110px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+.filter-chip {
+    background: var(--sp-gray-bg);
+    color: var(--sp-text-secondary);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.section-card {
+    border: 1px solid var(--sp-border);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.section-card-title {
+    font-weight: 700 !important;
+    font-size: 1.3rem !important;
+}
+
+.avatar-initials {
+    background: var(--sp-primary-light);
+    color: var(--sp-primary);
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    .blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+#blazor-error-ui {
+    display: none;
+}
+
+.loading-progress {
+    position: relative;
+    display: block;
+    width: 8rem;
+    height: 8rem;
+    margin: 20vh auto 1rem auto;
+}
+
+    .loading-progress circle {
+        fill: none;
+        stroke: #e0e0e0;
+        stroke-width: 0.6rem;
+        transform-origin: 50% 50%;
+        transform: rotate(-90deg);
+    }
+
+        .loading-progress circle:last-child {
+            stroke: var(--sp-primary);
+            stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+            transition: stroke-dasharray 0.05s ease-in-out;
+        }
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: bold;
+    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+}
+
+    .loading-progress-text:after {
+        content: var(--blazor-load-percentage-text, "Cargando");
+    }
+
+code {
+    color: #c02d76;
+}

@@ -1,0 +1,234 @@
+@using System.ComponentModel.DataAnnotations
+@using StorePro.Web.Services
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(EsNuevo ? "Añadir Producto" : "Editar Producto")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_model" OnValidSubmit="SaveAsync" novalidate>
+            <DataAnnotationsValidator />
+            <MudGrid Spacing="2">
+                <MudItem xs="12" Class="d-flex justify-center">
+                    <div class="position-relative">
+                        @if (!string.IsNullOrEmpty(_imagePreview))
+                        {
+                            <img src="@_imagePreview" class="product-dialog-image" alt="Vista previa" />
+                        }
+                        else
+                        {
+                            <div class="product-thumb-placeholder" style="width:110px;height:110px;">
+                                <MudIcon Icon="@Icons.Material.Outlined.Image" Size="Size.Large" />
+                            </div>
+                        }
+                    </div>
+                </MudItem>
+                <MudItem xs="12" Class="d-flex justify-center">
+                    <label class="sp-upload-btn">
+                        <InputFile OnChange="OnImageSelected" class="sp-hidden-input" />
+                        <MudIcon Icon="@Icons.Material.Outlined.Upload" Size="Size.Small" />
+                        <span>@(string.IsNullOrEmpty(_imagePreview) ? "Subir imagen" : "Cambiar imagen")</span>
+                    </label>
+                </MudItem>
+                @if (!string.IsNullOrEmpty(_imageError))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Warning" Dense="true">@_imageError</MudAlert>
+                    </MudItem>
+                }
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Name" Label="Nombre del producto" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" For="() => _model.Name" Immediate="true" Counter="200" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="Descripción" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Lines="3" For="() => _model.Description" Counter="2000" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_model.Price" Label="Precio ($)" Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" Min="0" Max="999999" Format="N2" For="() => _model.Price" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_model.Stock" Label="Stock" Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" Min="0" Format="N0" For="() => _model.Stock" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect @bind-Value="_model.CategoryId" T="int" Label="Categoría" Variant="Variant.Outlined"
+                               Margin="Margin.Dense" For="() => _model.CategoryId">
+                        @foreach (var c in _categories)
+                        {
+                            <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect @bind-Value="_model.Status" T="string" Label="Estado" Variant="Variant.Outlined"
+                               Margin="Margin.Dense" For="() => _model.Status">
+                        @foreach (var s in ProductStatuses.All)
+                        {
+                            <MudSelectItem Value="@s">@ProductStatuses.ToSpanish(s)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Error" Dense="true">@_errorMessage</MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CancelAsync" Disabled="_saving">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Loading="_saving">
+            @(EsNuevo ? "Añadir" : "Guardar Cambios")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public ProductDto? Producto { get; set; }
+
+    [Inject] private IProductService ProductService { get; set; } = default!;
+    [Inject] private ICategoryService CategoryService { get; set; } = default!;
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
+
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? string.Empty;
+
+    private bool EsNuevo => Producto is null;
+
+    private ProductForm _model = new();
+    private IReadOnlyList<CategoryDto> _categories = [];
+    private IBrowserFile? _imageFile;
+    private string? _imagePreview;
+    private string? _imageError;
+    private string? _errorMessage;
+    private bool _saving;
+
+    private class ProductForm
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
+        public string Name { get; set; } = string.Empty;
+
+        [MaxLength(2000, ErrorMessage = "Máximo 2000 caracteres.")]
+        public string? Description { get; set; }
+
+        [Range(0, 999999, ErrorMessage = "El precio debe ser entre 0 y 999999.")]
+        public decimal Price { get; set; }
+
+        [Range(0, int.MaxValue, ErrorMessage = "El stock debe ser mayor o igual a 0.")]
+        public int Stock { get; set; }
+
+        [Required(ErrorMessage = "Seleccione un estado.")]
+        public string Status { get; set; } = ProductStatuses.Active;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Seleccione una categoría.")]
+        public int CategoryId { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryService.GetCategoriesAsync() ?? [];
+
+        if (Producto is not null)
+        {
+            _model = new ProductForm
+            {
+                Name = Producto.Name,
+                Description = Producto.Description,
+                Price = Producto.Price,
+                Stock = Producto.Stock,
+                Status = Producto.Status,
+                CategoryId = Producto.CategoryId
+            };
+
+            if (!string.IsNullOrEmpty(Producto.ImageUrl))
+                _imagePreview = ApiBaseUrl + Producto.ImageUrl.TrimStart('/');
+        }
+    }
+
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        _imageError = null;
+        var file = e.File;
+        var allowed = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
+        if (!allowed.Contains(file.ContentType))
+        {
+            _imageError = "Formato no permitido. Use jpg, png, webp o gif.";
+            return;
+        }
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            _imageError = "La imagen supera el tamaño máximo de 5 MB.";
+            return;
+        }
+
+        _imageFile = file;
+        using var stream = file.OpenReadStream(5 * 1024 * 1024);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+        _imagePreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(memory.ToArray())}";
+    }
+
+    private async Task SaveAsync()
+    {
+        _errorMessage = null;
+        if (_model.CategoryId <= 0)
+        {
+            _errorMessage = "Debe seleccionar una categoría.";
+            return;
+        }
+
+        try
+        {
+            _saving = true;
+            ProductDto? saved;
+
+            if (EsNuevo)
+            {
+                var create = new CreateProductRequest(_model.Name, _model.Description, _model.Price,
+                    _model.Stock, _model.Status, _model.CategoryId);
+                saved = await ProductService.CreateAsync(create);
+            }
+            else
+            {
+                var update = new UpdateProductRequest(_model.Name, _model.Description, _model.Price,
+                    _model.Stock, _model.Status, _model.CategoryId);
+                var ok = await ProductService.UpdateAsync(Producto!.Id, update);
+                saved = ok ? await ProductService.GetProductAsync(Producto.Id) : null;
+            }
+
+            if (saved is null)
+            {
+                _errorMessage = "No se pudo guardar el producto.";
+                return;
+            }
+
+            if (_imageFile is not null)
+            {
+                var imageUrl = await ProductService.UploadImageAsync(saved.Id, _imageFile);
+                if (imageUrl is not null)
+                    saved = saved with { ImageUrl = imageUrl };
+            }
+
+            MudDialog.Close(DialogResult.Ok(saved));
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch
+        {
+            _errorMessage = "Error inesperado al guardar el producto.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void CancelAsync() => MudDialog.Cancel();
+}

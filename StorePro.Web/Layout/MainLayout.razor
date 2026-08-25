@@ -1,0 +1,148 @@
+﻿@inherits LayoutComponentBase
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudThemeProvider Theme="@_theme" IsDarkMode="_isDark" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@if (!AuthState.IsAuthenticated)
+{
+    <div class="auth-loading">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </div>
+}
+else
+{
+    <MudLayout>
+        <MudAppBar Elevation="0" Color="Color.Surface" Class="topbar">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Default" Variant="Variant.Text"
+                           OnClick="@(() => _drawerOpen = !_drawerOpen)" />
+            <MudText Typo="Typo.h6" Class="brand-title">StorePro Admin</MudText>
+            <MudSpacer />
+            <div class="status-pill d-none d-md-flex">
+                <span class="status-dot"></span>
+                <MudText Typo="Typo.body2">Sistema Operativo</MudText>
+            </div>
+            <MudIconButton Icon="@Icons.Material.Outlined.Notifications" Variant="Variant.Text" Class="mx-1">
+                <span class="notif-dot"></span>
+            </MudIconButton>
+            <MudIconButton Icon="@Icons.Material.Outlined.Settings" Variant="Variant.Text" Class="mx-1" />
+            <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Variant="Variant.Text"
+                     EndIcon="@Icons.Material.Filled.KeyboardArrowDown" CloseOnItemClick="false">
+                <MudText Typo="Typo.body2" Class="px-4 py-2 text-secondary">
+                    @AuthState.CurrentUser?.FullName (@UserRoles.ToSpanish(AuthState.CurrentUser?.Role ?? ""))
+                </MudText>
+                <MudDivider />
+                <MudMenuItem OnClick="LogoutAsync">
+                    <MudIcon Icon="@Icons.Material.Outlined.Logout" Class="mr-2" /> Cerrar Sesión
+                </MudMenuItem>
+            </MudMenu>
+        </MudAppBar>
+
+        <MudDrawer @bind-Open="_drawerOpen" Elevation="0" PreserveOpenState="true" Class="sidebar">
+            <MudDrawerHeader Class="sidebar-header">
+                <div class="logo-block">
+                    <div class="logo-icon">
+                        <MudIcon Icon="@Icons.Material.Outlined.Storefront" Size="Size.Medium" />
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="logo-title">StorePro</MudText>
+                        <MudText Typo="Typo.caption" Class="logo-subtitle">Management Suite</MudText>
+                    </div>
+                </div>
+            </MudDrawerHeader>
+
+            <nav class="sidebar-nav">
+                <NavLink Href="/" class="nav-item" ActiveClass="nav-item-active" Match="NavLinkMatch.All">
+                    <MudIcon Icon="@Icons.Material.Outlined.Dashboard" Class="nav-icon" /> <span>Panel</span>
+                </NavLink>
+                <NavLink Href="/productos" class="nav-item" ActiveClass="nav-item-active" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Class="nav-icon" /> <span>Productos</span>
+                </NavLink>
+                <NavLink Href="/categorias" class="nav-item" ActiveClass="nav-item-active" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@Icons.Material.Outlined.Category" Class="nav-icon" /> <span>Categorías</span>
+                </NavLink>
+                <NavLink Href="/usuarios" class="nav-item" ActiveClass="nav-item-active" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@Icons.Material.Outlined.People" Class="nav-icon" /> <span>Usuarios</span>
+                </NavLink>
+                <NavLink Href="/catalogo" class="nav-item" ActiveClass="nav-item-active" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@Icons.Material.Outlined.Storefront" Class="nav-icon" /> <span>Catálogo</span>
+                </NavLink>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <NavLink Href="/soporte" class="nav-item" ActiveClass="nav-item-active" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@Icons.Material.Outlined.HelpOutline" Class="nav-icon" /> <span>Soporte</span>
+                </NavLink>
+                <NavLink Href="/registros" class="nav-item" ActiveClass="nav-item-active" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@Icons.Material.Outlined.Terminal" Class="nav-icon" /> <span>Registros</span>
+                </NavLink>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" FullWidth="true" Class="logout-btn"
+                           StartIcon="@Icons.Material.Outlined.Logout" OnClick="LogoutAsync">
+                    Cerrar Sesión
+                </MudButton>
+            </div>
+        </MudDrawer>
+
+        <MudMainContent Class="main-content pa-6">
+            @Body
+        </MudMainContent>
+    </MudLayout>
+}
+
+@code {
+    private static readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#5B4FE9",
+            Secondary = "#0F172A",
+            AppbarBackground = "#FFFFFF",
+            AppbarText = "#0F172A",
+            DrawerBackground = "#FFFFFF",
+            DrawerText = "#334155",
+            Background = "#F8F9FC",
+            Surface = "#FFFFFF",
+            TextPrimary = "#0F172A",
+            TextSecondary = "#64748B",
+            Success = "#16A34A",
+            Error = "#DC2626",
+            Info = "#0EA5E9",
+            Warning = "#F59E0B"
+        },
+        LayoutProperties = new LayoutProperties { DefaultBorderRadius = "10px" },
+        Typography = new Typography
+        {
+            Default = new DefaultTypography { FontFamily = ["Roboto", "Helvetica", "Arial", "sans-serif"] }
+        }
+    };
+
+    private bool _drawerOpen = true;
+    private bool _isDark;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState.Changed += OnAuthChanged;
+        await AuthState.InitializeAsync();
+
+        if (!AuthState.IsAuthenticated)
+            Navigation.NavigateTo("/login", replace: true);
+    }
+
+    private void OnAuthChanged()
+    {
+        if (!AuthState.IsAuthenticated)
+            Navigation.NavigateTo("/login", replace: true);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthState.ClearAsync();
+        Snackbar.Add("Sesión cerrada correctamente.", Severity.Info);
+        Navigation.NavigateTo("/login", replace: true);
+    }
+}

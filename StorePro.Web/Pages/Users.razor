@@ -1,0 +1,342 @@
+@page "/usuarios"
+@inject IUserService UserService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Gestión de Usuarios | StorePro</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1 class="page-title">Gestión de Usuarios</h1>
+        <p class="page-subtitle">Gestione el acceso, los roles y el estado de la plataforma.</p>
+    </div>
+    <div class="page-header-actions">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PersonAdd"
+                   OnClick="@(() => OpenCreateDialogAsync())" Class="text-none" Size="Size.Medium">
+            Agregar Usuario
+        </MudButton>
+    </div>
+</div>
+
+<MudGrid Spacing="4" Class="mb-6">
+    <MudItem xs="12" sm="6" lg="3">
+        <div class="stat-card">
+            <div class="stat-icon mb-2" style="background:var(--sp-primary-light);color:var(--sp-primary);">
+                <MudIcon Icon="@Icons.Material.Outlined.People" />
+            </div>
+            <div class="stat-label">USUARIOS TOTALES</div>
+            <div class="stat-value">@Format.Number(_stats?.TotalUsers ?? 0)</div>
+        </div>
+    </MudItem>
+    <MudItem xs="12" sm="6" lg="3">
+        <div class="stat-card">
+            <div class="stat-icon mb-2" style="background:var(--sp-green-bg);color:var(--sp-green-text);">
+                <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" />
+            </div>
+            <div class="stat-label">ACTIVOS</div>
+            <div class="stat-value">@Format.Number(_stats?.ActiveUsers ?? 0)</div>
+        </div>
+    </MudItem>
+    <MudItem xs="12" sm="6" lg="3">
+        <div class="stat-card">
+            <div class="stat-icon mb-2" style="background:var(--sp-pink-bg);color:var(--sp-pink);">
+                <MudIcon Icon="@Icons.Material.Outlined.AdminPanelSettings" />
+            </div>
+            <div class="stat-label">ADMINISTRADORES</div>
+            <div class="stat-value">@Format.Number(_stats?.AdminCount ?? 0)</div>
+        </div>
+    </MudItem>
+    <MudItem xs="12" sm="6" lg="3">
+        <div class="stat-card" style="position:relative;">
+            <span style="position:absolute;top:14px;right:14px;width:10px;height:10px;border-radius:50%;background:var(--sp-red-text);"></span>
+            <div class="stat-icon mb-2" style="background:var(--sp-red-bg);color:var(--sp-red-text);">
+                <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" />
+            </div>
+            <div class="stat-label">PENDIENTES DE REVISIÓN</div>
+            <div class="stat-value">@Format.Number(_stats?.PendingReview ?? 0)</div>
+        </div>
+    </MudItem>
+</MudGrid>
+
+<div class="section-card">
+    <div class="d-flex justify-space-between align-center pa-4 flex-wrap" style="gap:12px;">
+        <MudTextField @bind-Value="_search" T="string" Placeholder="Filtrar usuarios por correo..."
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                      IconSize="Size.Small" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Immediate="true" OnKeyUp="OnSearchKeyUp" Style="max-width:360px;" />
+        <div class="d-flex" style="gap:8px;">
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.FilterList"
+                       OnClick="ApplyFilterAsync" Class="text-none">Filtrar</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Download"
+                       OnClick="ExportAsync" Class="text-none">Exportar</MudButton>
+        </div>
+    </div>
+
+    <div class="table-scroll">
+        <table class="sp-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Última Actividad</th>
+                    <th style="text-align:right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_loading)
+                {
+                    <tr><td colspan="5"><MudProgressLinear Color="Color.Primary" Indeterminate="true" /></td></tr>
+                }
+                else if (_users.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="cell-muted" style="text-align:center;padding:32px;">
+                            No se encontraron usuarios.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var u in _users)
+                    {
+                        var usuario = u;
+                        <tr style="@(usuario.Status == UserStatuses.Suspended ? "opacity:.65;" : "")">
+                            <td>
+                                <div class="d-flex align-center" style="gap:12px;">
+                                    <MudAvatar Size="Size.Medium" Class="avatar-initials">@Format.Initials(usuario.FullName)</MudAvatar>
+                                    <div>
+                                        <div class="cell-strong" style="cursor:pointer;"
+                                             @onclick="@(() => Navigation.NavigateTo($"/usuarios/{usuario.Id}"))">
+                                            @usuario.FullName
+                                        </div>
+                                        <div class="cell-muted">@usuario.Email</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <MudSelect T="string" Value="usuario.Role"
+                                           ValueChanged="@(async (string r) => await ChangeRoleAsync(usuario, r))" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           Style="max-width:160px;" Dense="true">
+                                    @foreach (var r in UserRoles.All)
+                                    {
+                                        <MudSelectItem Value="@r">@UserRoles.ToSpanish(r)</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </td>
+                            <td>
+                                <div class="d-flex align-center" style="gap:8px;">
+                                    <MudSwitch T="bool" Value="@(usuario.Status == UserStatuses.Active)" Color="Color.Success"
+                                               Size="Size.Small"
+                                               ValueChanged="@(async (bool active) => await ChangeStatusAsync(usuario, active))" />
+                                    <span>@UserStatuses.ToSpanish(usuario.Status)</span>
+                                </div>                            </td>
+                            <td class="cell-muted">@Format.Relative(usuario.LastActiveAt)</td>
+                            <td style="text-align:right;">
+                                <MudMenu Icon="@Icons.Material.Outlined.MoreVert" Variant="Variant.Text" Dense="true"
+                                         EndIcon="@(null as string)" StandardSize="true">
+                                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo($"/usuarios/{usuario.Id}"))">
+                                        Ver Detalles
+                                    </MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => OpenEditDialogAsync(usuario))">Editar</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => ToggleStatusAsync(usuario))">
+                                        @(usuario.Status == UserStatuses.Active ? "Suspender" : "Reactivar")
+                                    </MudMenuItem>
+                                    <MudDivider Class="my-1" />
+                                    <MudMenuItem Style="color:var(--sp-red-text);" OnClick="@(() => DeleteAsync(usuario))">
+                                        Eliminar
+                                    </MudMenuItem>
+                                </MudMenu>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex justify-space-between align-center pa-4 flex-wrap" style="gap:12px;">
+        <MudText Typo="Typo.body2" Class="cell-muted">
+            Mostrando @RangeFrom–@RangeTo de @Format.Number(_total)
+        </MudText>
+        <MudPagination Count="@Math.Max(1, _totalPages)" SelectedIndex="_page" SelectedIndexChanged="OnPageChangedAsync"
+                       Color="Color.Primary" ShowFirstButton="false" ShowLastButton="false" MiddleCount="3" />
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<UserDetailDto> _users = [];
+    private UserStatsDto? _stats;
+    private bool _loading = true;
+
+    private string _search = string.Empty;
+    private string _appliedSearch = string.Empty;
+    private int _page = 0;
+    private int _total;
+    private int _totalPages;
+    private const int PageSize = 8;
+
+    private int RangeFrom => _total == 0 ? 0 : _page * PageSize + 1;
+    private int RangeTo => Math.Min((_page + 1) * PageSize, _total);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatsAsync();
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadStatsAsync()
+    {
+        try { _stats = await UserService.GetStatsAsync(); }
+        catch (ApiException) { /* sin permisos */ }
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _loading = true;
+        try
+        {
+            var result = await UserService.GetUsersAsync(search: _appliedSearch, page: _page + 1, pageSize: PageSize);
+            _users = result?.Items ?? [];
+            _total = result?.TotalCount ?? 0;
+            _totalPages = result?.TotalPages ?? 1;
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter")
+            await ApplyFilterAsync();
+    }
+
+    private async Task ApplyFilterAsync()
+    {
+        _appliedSearch = _search?.Trim() ?? string.Empty;
+        _page = 0;
+        await LoadUsersAsync();
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _page = Math.Max(0, page);
+        await LoadUsersAsync();
+    }
+
+    private async Task ChangeRoleAsync(UserDetailDto usuario, string role)
+    {
+        if (role == usuario.Role)
+            return;
+
+        try
+        {
+            await UserService.UpdateAsync(usuario.Id, new UpdateUserRequest(
+                usuario.FullName, usuario.Email, role, usuario.Status, null));
+            Snackbar.Add($"Rol de {usuario.FullName} actualizado a {UserRoles.ToSpanish(role)}.", Severity.Success);
+            await LoadStatsAsync();
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task ChangeStatusAsync(UserDetailDto usuario, bool active)
+    {
+        var newStatus = active ? UserStatuses.Active : UserStatuses.Suspended;
+        if (newStatus == usuario.Status)
+            return;
+
+        try
+        {
+            await UserService.UpdateStatusAsync(usuario.Id, newStatus);
+            Snackbar.Add($"{usuario.FullName} ahora está {UserStatuses.ToSpanish(newStatus).ToLower()}.", Severity.Success);
+            await LoadStatsAsync();
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task ToggleStatusAsync(UserDetailDto usuario) =>
+        await ChangeStatusAsync(usuario, usuario.Status != UserStatuses.Active);
+
+    private async Task OpenCreateDialogAsync()
+    {
+        var dialog = await DialogService.ShowAsync<UserEditDialog>("Invitar Usuario",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Usuario invitado correctamente.", Severity.Success);
+            await LoadUsersAsync();
+            await LoadStatsAsync();
+        }
+    }
+
+    private async Task OpenEditDialogAsync(UserDetailDto usuario)
+    {
+        var parameters = new DialogParameters<UserEditDialog> { { x => x.Usuario, usuario } };
+        var dialog = await DialogService.ShowAsync<UserEditDialog>("Editar Usuario",
+            parameters, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Usuario actualizado correctamente.", Severity.Success);
+            await LoadUsersAsync();
+            await LoadStatsAsync();
+        }
+    }
+
+    private async Task DeleteAsync(UserDetailDto usuario)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Eliminar usuario",
+            $"¿Está seguro de que desea eliminar a \"{usuario.FullName}\"? Esta acción no se puede deshacer.",
+            yesText: "Eliminar", noText: "Cancelar");
+
+        if (confirmed is null or false)
+            return;
+
+        try
+        {
+            await UserService.DeleteAsync(usuario.Id);
+            Snackbar.Add("Usuario eliminado correctamente.", Severity.Success);
+            await LoadUsersAsync();
+            await LoadStatsAsync();
+        }
+        catch (ApiException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Nombre;Correo;Rol;Estado;Ultima Actividad");
+        foreach (var u in _users)
+            csv.AppendLine($"{u.FullName};{u.Email};{UserRoles.ToSpanish(u.Role)};{UserStatuses.ToSpanish(u.Status)};{Format.Relative(u.LastActiveAt)}");
+
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(csv.ToString()));
+        using var reference = new DotNetStreamReference(stream);
+        await JSRuntime.InvokeVoidAsync("downloadFile", "usuarios.csv", "text/csv", reference);
+    }
+}

@@ -1,0 +1,89 @@
+@using System.ComponentModel.DataAnnotations
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(EsNueva ? "Añadir Categoría" : "Editar Categoría")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_model" OnValidSubmit="SaveAsync" novalidate>
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="_model.Name" Label="Nombre de la categoría" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Class="mb-4" For="() => _model.Name" Immediate="true" Counter="100" />
+            <MudTextField @bind-Value="_model.Description" Label="Descripción" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Lines="3" Class="mb-4" For="() => _model.Description" Counter="500" />
+            <MudSwitch @bind-Value="_model.IsActive" Label="Categoría activa" Color="Color.Primary" T="bool" />
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-4">@_errorMessage</MudAlert>
+            }
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="CancelAsync" Disabled="_saving">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Loading="_saving">
+            @(EsNueva ? "Añadir" : "Guardar Cambios")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private ICategoryService CategoryService { get; set; } = default!;
+
+    [Parameter] public CategoryDto? Categoria { get; set; }
+
+    private CategoryForm _model = new();
+    private string? _errorMessage;
+    private bool _saving;
+    private bool EsNueva => Categoria is null;
+
+    private class CategoryForm
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [MaxLength(100, ErrorMessage = "Máximo 100 caracteres.")]
+        public string Name { get; set; } = string.Empty;
+
+        [MaxLength(500, ErrorMessage = "Máximo 500 caracteres.")]
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    protected override void OnInitialized()
+    {
+        if (Categoria is not null)
+            _model = new CategoryForm { Name = Categoria.Name, Description = Categoria.Description, IsActive = Categoria.IsActive };
+    }
+
+    private async Task SaveAsync()
+    {
+        _errorMessage = null;
+        _saving = true;
+        try
+        {
+            if (EsNueva)
+            {
+                await CategoryService.CreateAsync(new CreateCategoryRequest(_model.Name, _model.Description, _model.IsActive));
+            }
+            else
+            {
+                await CategoryService.UpdateAsync(Categoria!.Id,
+                    new UpdateCategoryRequest(_model.Name, _model.Description, _model.IsActive));
+            }
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch
+        {
+            _errorMessage = "Error inesperado al guardar la categoría.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void CancelAsync() => MudDialog.Cancel();
+}
