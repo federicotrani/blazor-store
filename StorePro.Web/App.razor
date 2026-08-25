@@ -1,4 +1,22 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+﻿@code {
+    [Microsoft.AspNetCore.Components.Inject] private IJSRuntime JS { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var theme = await JS.InvokeAsync<string?>("localStorage.getItem", "storepro.theme");
+                if (theme == "dark")
+                    await JS.InvokeVoidAsync("document.documentElement.classList.add", "dark-mode");
+            }
+            catch { /* ignore */ }
+        }
+    }
+}
+
+<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />

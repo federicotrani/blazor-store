@@ -2,6 +2,8 @@
 @inject AuthStateService AuthState
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject ILocalStorageService Storage
+@inject IJSRuntime JS
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDark" />
 <MudPopoverProvider />
@@ -29,7 +31,20 @@ else
             <MudIconButton Icon="@Icons.Material.Outlined.Notifications" Variant="Variant.Text" Class="mx-1">
                 <span class="notif-dot"></span>
             </MudIconButton>
-            <MudIconButton Icon="@Icons.Material.Outlined.Settings" Variant="Variant.Text" Class="mx-1" />
+            <MudMenu Icon="@Icons.Material.Outlined.Settings" Variant="Variant.Text" Class="mx-1"
+                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                     Dense="true" PopoverClass="theme-menu">
+                <MudText Typo="Typo.overline" Class="px-4 py-2 text-secondary">APARIENCIA</MudText>
+                <MudDivider />
+                <MudMenuItem Icon="@(_isDark ? Icons.Material.Outlined.LightMode : Icons.Material.Filled.Check)"
+                             OnClick="@(() => SetThemeAsync(false))">
+                    Tema claro
+                </MudMenuItem>
+                <MudMenuItem Icon="@(_isDark ? Icons.Material.Filled.Check : Icons.Material.Outlined.DarkMode)"
+                             OnClick="@(() => SetThemeAsync(true))">
+                    Tema oscuro
+                </MudMenuItem>
+            </MudMenu>
             <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Variant="Variant.Text"
                      EndIcon="@Icons.Material.Filled.KeyboardArrowDown" CloseOnItemClick="false">
                 <MudText Typo="Typo.body2" Class="px-4 py-2 text-secondary">
@@ -94,6 +109,8 @@ else
 }
 
 @code {
+    private const string ThemeStorageKey = "storepro.theme";
+
     private static readonly MudTheme _theme = new()
     {
         PaletteLight = new PaletteLight
@@ -113,6 +130,25 @@ else
             Info = "#0EA5E9",
             Warning = "#F59E0B"
         },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#7C6FF0",
+            Secondary = "#94A3B8",
+            AppbarBackground = "#0F172A",
+            AppbarText = "#F1F5F9",
+            DrawerBackground = "#0F172A",
+            DrawerText = "#CBD5E1",
+            Background = "#0B1220",
+            Surface = "#1E293B",
+            TextPrimary = "#F1F5F9",
+            TextSecondary = "#94A3B8",
+            Success = "#22C55E",
+            Error = "#F87171",
+            Info = "#38BDF8",
+            Warning = "#FBBF24",
+            Dark = "#0F172A",
+            DarkContrastText = "#F1F5F9"
+        },
         LayoutProperties = new LayoutProperties { DefaultBorderRadius = "10px" },
         Typography = new Typography
         {
@@ -128,6 +164,10 @@ else
         AuthState.Changed += OnAuthChanged;
         await AuthState.InitializeAsync();
 
+        var stored = await Storage.GetAsync(ThemeStorageKey);
+        _isDark = stored == "dark";
+        await ApplyThemeClassAsync();
+
         if (!AuthState.IsAuthenticated)
             Navigation.NavigateTo("/login", replace: true);
     }
@@ -137,6 +177,28 @@ else
         if (!AuthState.IsAuthenticated)
             Navigation.NavigateTo("/login", replace: true);
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SetThemeAsync(bool isDark)
+    {
+        if (_isDark == isDark)
+            return;
+
+        _isDark = isDark;
+        await Storage.SetAsync(ThemeStorageKey, isDark ? "dark" : "light");
+        await ApplyThemeClassAsync();
+    }
+
+    private async Task ApplyThemeClassAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("document.documentElement.classList.toggle", "dark-mode", _isDark);
+        }
+        catch
+        {
+            // JSRuntime no disponible durante prerender; se aplica al re-renderizar.
+        }
     }
 
     private async Task LogoutAsync()
